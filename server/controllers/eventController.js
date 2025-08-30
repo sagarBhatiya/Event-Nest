@@ -37,30 +37,31 @@ const createEvent = async (req, res) => {
   }
 };
 
-const registerUser = async (req,res) => {
-   const userId = req.id;
-   const {eventId} = req.params;
+const registerUser = async (req, res) => {
+  const userId = req.id;
+  const { eventId } = req.params;
 
-   try {
-    
+  try {
     const event = await Event.findById(eventId);
 
-    if(!event){
+    if (!event) {
       return res.status(404).json({
         success: false,
-        message:"Event not found",
-        data:null, 
-      })
+        message: "Event not found",
+        data: null,
+      });
     }
-    
-    const isUserRegistered = event.registeredUsers.some((registeredUserId)=>registeredUserId.toString() === userId);
 
-    if(isUserRegistered){
+    const isUserRegistered = event.registeredUsers.some(
+      (registeredUserId) => registeredUserId.toString() === userId
+    );
+
+    if (isUserRegistered) {
       return res.status(400).json({
         success: false,
         message: "User already registered for this event",
         data: null,
-      })
+      });
     }
 
     event.registerdUser.push(userId);
@@ -74,10 +75,57 @@ const registerUser = async (req,res) => {
       success: true,
       message: "Registration successfully",
       data: event,
-    })
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: true, message: error.message, data: null });
+  }
+};
 
-   } catch (error) {
-      return res.status(500).json({success:true,message:error.message,data:null});
-   }
-}
+const getEvents = async (req, res) => {
+  try {
+    const events = await Event.find()
+      .populate({
+        path: "registeredUsers",
+        select: "firstName lastName",
+      })
+      .sort({ createdAt: -1 });
 
+    return res.status(200).json({
+      success: true,
+      message: "Events fetched successfully",
+      data: events,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: error.message, data: null });
+  }
+};
+
+const getRegisteredEvents = async (req, res) => {
+  const userId = req.id;
+
+  try {
+    const events = await User.findById(userId)
+      .populate("registeredEvents")
+      .sort({ createdAt: -1 });
+    if (events.registeredEvents.length <= 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No registered events found",
+        data: null,
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Registered events fetched successfully",
+      data: events.registeredEvents,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: error.message, data: null });
+  }
+};
